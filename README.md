@@ -1,6 +1,5 @@
 Lex Chatbot Testing Application
 
-
 This application provides a simple interface to test Amazon Lex chatbot, with support for text conversations and document processing.
 
 Features
@@ -12,9 +11,8 @@ Environment variables for secure configuration
 
 Setup Instructions
 Create a .env.local file for local development:
-
 REACT_APP_AWS_REGION=eu-west-2
-REACT_APP_LEX_BOT_ID=your-lex-bot-id
+REACT_APP_LEX_BOT_ID=lex-bot-id
 REACT_APP_LEX_BOT_ALIAS_ID=alias-id
 REACT_APP_LEX_LOCALE_ID=en_US
 
