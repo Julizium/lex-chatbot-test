@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Auth } from 'aws-amplify';
 import { LexRuntimeV2 } from 'aws-sdk';
 import config from '../config';
 import './ChatInterface.css';
@@ -12,17 +11,15 @@ const ChatInterface = () => {
   const messagesEndRef = useRef(null);
   const [lexClient, setLexClient] = useState(null);
 
-  // Create a Lex client once authenticated
+  // Create a Lex client on component mount
   useEffect(() => {
     const setupLexClient = async () => {
       try {
-        // Get current authenticated credentials
-        const credentials = await Auth.currentCredentials();
-        
-        // Create Lex client
+        // Create Lex client without Cognito
         const client = new LexRuntimeV2({
           region: config.region,
-          credentials: Auth.essentialCredentials(credentials)
+          // Use anonymous/unauthenticated access (for now)
+          // This requires IAM permissions on the Lex bot
         });
         
         setLexClient(client);
