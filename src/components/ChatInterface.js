@@ -15,11 +15,9 @@ const ChatInterface = () => {
   useEffect(() => {
     const setupLexClient = async () => {
       try {
-        // Create Lex client without Cognito
+        // Create Lex client using IAM role (no explicit credentials)
         const client = new LexRuntimeV2({
-          region: config.region,
-          // Use anonymous/unauthenticated access (for now)
-          // This requires IAM permissions on the Lex bot
+          region: config.region
         });
         
         setLexClient(client);
