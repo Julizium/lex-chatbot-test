@@ -1,13 +1,23 @@
-
 import { Amplify } from 'aws-amplify';
 
-// Just initialize with minimal config
-Amplify.configure({
-  // Empty config to avoid errors
-});
+const awsConfig = {
+  Auth: {
+    // For unauthenticated users
+    identityPoolId: process.env.REACT_APP_IDENTITY_POOL_ID, 
+    region: process.env.REACT_APP_AWS_REGION || 'eu-west-2',
+    mandatorySignIn: false
+  },
+  
+  // We'll add other services (Interactions, Storage) later
+  
+  // Add region info for other services
+  region: process.env.REACT_APP_AWS_REGION || 'eu-west-2'
+};
 
-export default {};
+// Configure Amplify with our settings
+Amplify.configure(awsConfig);
 
+export default awsConfig;
 
 
 // import { Amplify } from 'aws-amplify';
