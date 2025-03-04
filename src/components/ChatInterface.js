@@ -4,33 +4,33 @@ import { Interactions } from '@aws-amplify/interactions';
 import config from '../config';
 import './ChatInterface.css';
 
-// Initialize Amplify with just the necessary configuration
-console.log('Configuring Amplify with:', {
-    botId: config.lexBotId,
-    botAliasId: config.lexBotAliasId,
-    localeId: config.lexLocaleId,
-    region: config.region
-  });
-  
-  Amplify.configure({
-    Interactions: {
-      bots: {
-        "OrderProcessingBot": { // Important: Use actual bot name here and below: const response = await Interactions.send("OrderProcessingBot", inputText);
-          botId: config.lexBotId,
-          botAliasId: config.lexBotAliasId,
-          localeId: config.lexLocaleId,
-          region: config.region
-        }
+Amplify.configure({
+  region: config.region,
+  Interactions: {
+    bots: {
+      "OrderProcessingBot": {
+        botId: config.lexBotId,
+        botAliasId: config.lexBotAliasId,
+        localeId: config.lexLocaleId,
+        region: config.region
       }
     }
-  });
+  }
+});
+
+console.log('Configured Amplify with:', {
+  region: config.region,
+  botId: config.lexBotId,
+  botAliasId: config.lexBotAliasId,
+  localeId: config.lexLocaleId
+});
 
 console.log('Environment variables:', {
-    region: process.env.REACT_APP_AWS_REGION,
-    botId: process.env.REACT_APP_LEX_BOT_ID,
-    botAliasId: process.env.REACT_APP_LEX_BOT_ALIAS_ID,
-    localeId: process.env.REACT_APP_LEX_LOCALE_ID
-  });
+  region: process.env.REACT_APP_AWS_REGION,
+  botId: process.env.REACT_APP_LEX_BOT_ID,
+  botAliasId: process.env.REACT_APP_LEX_BOT_ALIAS_ID,
+  localeId: process.env.REACT_APP_LEX_LOCALE_ID
+});
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
