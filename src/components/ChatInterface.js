@@ -1,20 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-runtime-v2";
-import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
-import awsConfig from '../aws-config';
 import './ChatInterface.css';
 
 // Create a unique session ID that persists for the session
 const sessionId = "session-" + Math.random().toString(36).substring(2, 10);
-
-// Create Lex client with credentials from Cognito Identity Pool
-const lexClient = new LexRuntimeV2Client({ 
-  region: awsConfig.region,
-  credentials: fromCognitoIdentityPool({
-    clientConfig: { region: awsConfig.region },
-    identityPoolId: awsConfig.identityPoolId
-  })
-});
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -43,7 +31,7 @@ const ChatInterface = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  // Send text message to Lex
+  // Send text message to API Gateway
   const sendTextMessage = async () => {
     if (!inputText.trim()) return;
     
@@ -58,45 +46,19 @@ const ChatInterface = () => {
     setIsLoading(true);
     
     try {
-      console.log("Sending message to Lex:", inputText);
-      
-      // Use AWS SDK to call Lex directly
-      const params = {
-        botId: awsConfig.lexBotId,
-        botAliasId: awsConfig.lexBotAliasId,
-        localeId: awsConfig.lexLocaleId,
-        sessionId: sessionId,
-        text: inputText
-      };
-      
-      console.log("Lex parameters:", params);
-      
-      const command = new RecognizeTextCommand(params);
-      const response = await lexClient.send(command);
-      
-      console.log("Received response from Lex:", response);
-      
-      if (response.messages && response.messages.length > 0) {
-        const botMessages = response.messages.map(message => ({
+      // Simple echo for now
+      setTimeout(() => {
+        const botMessage = {
           type: 'bot',
-          content: message.content,
+          content: `You said: "${inputText}"`,
           timestamp: new Date().toISOString()
-        }));
+        };
         
-        setMessages(prevMessages => [...prevMessages, ...botMessages]);
-      } else {
-        // Handle empty response
-        setMessages(prevMessages => [
-          ...prevMessages, 
-          {
-            type: 'bot',
-            content: "I didn't understand that. Could you try again?",
-            timestamp: new Date().toISOString()
-          }
-        ]);
-      }
+        setMessages(prevMessages => [...prevMessages, botMessage]);
+        setIsLoading(false);
+      }, 1000);
     } catch (error) {
-      console.error('Error communicating with Lex:', error);
+      console.error('Error:', error);
       
       const errorMessage = {
         type: 'bot',
@@ -106,7 +68,6 @@ const ChatInterface = () => {
       };
       
       setMessages(prevMessages => [...prevMessages, errorMessage]);
-    } finally {
       setIsLoading(false);
     }
   };
