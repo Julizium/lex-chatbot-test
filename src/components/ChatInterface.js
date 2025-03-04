@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LexRuntimeV2 } from 'aws-sdk';
+import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-runtime-v2";
 import config from '../config';
 import './ChatInterface.css';
 
@@ -8,22 +8,30 @@ const ChatInterface = () => {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState('');
-  const messagesEndRef = useRef(null);
   const [lexClient, setLexClient] = useState(null);
-
+  const messagesEndRef = useRef(null);
+  
   // Create a Lex client on component mount
   useEffect(() => {
     const setupLexClient = async () => {
       try {
-        // Create Lex client using IAM role (no explicit credentials)
-        const client = new LexRuntimeV2({
+        console.log("Setting up Lex client with config:", {
+          region: config.region,
+          botId: config.lexBotId,
+          botAliasId: config.lexBotAliasId,
+          localeId: config.lexLocaleId
+        });
+        
+        // Create Lex client
+        const client = new LexRuntimeV2Client({
           region: config.region
         });
         
         setLexClient(client);
         
         // Generate a unique session ID
-        setSessionId(generateSessionId());
+        const newSessionId = generateSessionId();
+        setSessionId(newSessionId);
         
         // Add welcome message
         setMessages([
@@ -79,7 +87,12 @@ const ChatInterface = () => {
         text: inputText
       };
       
-      const response = await lexClient.recognizeText(params);
+      console.log("Sending message to Lex with params:", params);
+      
+      const command = new RecognizeTextCommand(params);
+      const response = await lexClient.send(command);
+      
+      console.log("Received response from Lex:", response);
       
       if (response.messages && response.messages.length > 0) {
         const botMessages = response.messages.map(message => ({
@@ -105,7 +118,7 @@ const ChatInterface = () => {
       
       const errorMessage = {
         type: 'bot',
-        content: 'Sorry, there was an error processing your request. Please try again.',
+        content: `Sorry, there was an error: ${error.message}`,
         timestamp: new Date().toISOString(),
         isError: true
       };
@@ -116,98 +129,11 @@ const ChatInterface = () => {
     }
   };
   
-  // Handle file upload for document processing
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file || !lexClient) return;
-    
-    const fileMessage = {
-      type: 'user',
-      content: `Uploaded document: ${file.name}`,
-      timestamp: new Date().toISOString(),
-      isFile: true
-    };
-    
-    setMessages(prevMessages => [...prevMessages, fileMessage]);
-    setIsLoading(true);
-    
-    try {
-      // Convert file to base64
-      const base64Content = await fileToBase64(file);
-      
-      // Call Lex with the document
-      const params = {
-        botId: config.lexBotId,
-        botAliasId: config.lexBotAliasId,
-        localeId: config.lexLocaleId,
-        sessionId: sessionId,
-        requestAttributes: {
-          'x-amz-lex-document': base64Content
-        }
-      };
-      
-      // For document processing, we'll send a text message to trigger the appropriate intent
-      params.text = "Process this document";
-      
-      const response = await lexClient.recognizeText(params);
-      
-      if (response.messages && response.messages.length > 0) {
-        const botMessages = response.messages.map(message => ({
-          type: 'bot',
-          content: message.content,
-          timestamp: new Date().toISOString()
-        }));
-        
-        setMessages(prevMessages => [...prevMessages, ...botMessages]);
-      } else {
-        // Handle empty response
-        setMessages(prevMessages => [
-          ...prevMessages, 
-          {
-            type: 'bot',
-            content: 'I couldn\'t process that document. Please try a different format.',
-            timestamp: new Date().toISOString()
-          }
-        ]);
-      }
-    } catch (error) {
-      console.error('Error uploading document:', error);
-      
-      const errorMessage = {
-        type: 'bot',
-        content: 'Sorry, there was an error processing your document. Please try again.',
-        timestamp: new Date().toISOString(),
-        isError: true
-      };
-      
-      setMessages(prevMessages => [...prevMessages, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Convert file to base64
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        // Extract the base64 data from data URL
-        const base64Content = reader.result.split(',')[1];
-        resolve(base64Content);
-      };
-      reader.onerror = (error) => {
-        reject(error);
-      };
-    });
-  };
-  
-  // Handle input text change
+  // Handle input change and form submission (rest of the component remains similar)
   const handleInputChange = (e) => {
     setInputText(e.target.value);
   };
   
-  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     if (inputText.trim() && lexClient) {
@@ -215,7 +141,6 @@ const ChatInterface = () => {
     }
   };
   
-  // Handle key press (Enter to send)
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -234,13 +159,7 @@ const ChatInterface = () => {
             className={`message ${message.type} ${message.isError ? 'error' : ''}`}
           >
             <div className="message-content">
-              {message.isFile ? (
-                <div className="file-message">
-                  <i className="file-icon">📄</i> {message.content}
-                </div>
-              ) : (
-                message.content
-              )}
+              {message.content}
             </div>
             <div className="message-timestamp">
               {new Date(message.timestamp).toLocaleTimeString()}
@@ -275,16 +194,6 @@ const ChatInterface = () => {
         >
           Send
         </button>
-        
-        <label className="file-upload-button">
-          <input
-            type="file"
-            onChange={handleFileUpload}
-            accept=".pdf,.jpg,.jpeg,.png"
-            disabled={isLoading || !lexClient}
-          />
-          📎
-        </label>
       </form>
     </div>
   );
