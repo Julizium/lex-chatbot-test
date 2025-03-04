@@ -1,23 +1,14 @@
-import { Amplify } from 'aws-amplify';
 
 const awsConfig = {
-  Auth: {
-    // For unauthenticated users
-    identityPoolId: process.env.REACT_APP_IDENTITY_POOL_ID, 
     region: process.env.REACT_APP_AWS_REGION || 'eu-west-2',
-    mandatorySignIn: false
-  },
+    identityPoolId: process.env.REACT_APP_IDENTITY_POOL_ID,
+    lexBotId: process.env.REACT_APP_LEX_BOT_ID,
+    lexBotAliasId: process.env.REACT_APP_LEX_BOT_ALIAS_ID,
+    lexLocaleId: process.env.REACT_APP_LEX_LOCALE_ID || 'en_US',
+    s3BucketName: process.env.REACT_APP_S3_BUCKET_NAME
+  };
   
-  // We'll add other services (Interactions, Storage) later
-  
-  // Add region info for other services
-  region: process.env.REACT_APP_AWS_REGION || 'eu-west-2'
-};
-
-// Configure Amplify with our settings
-Amplify.configure(awsConfig);
-
-export default awsConfig;
+  export default awsConfig;
 
 
 // import { Amplify } from 'aws-amplify';

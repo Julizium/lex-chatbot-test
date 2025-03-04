@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './ChatInterface.css';
-
-// Import AWS SDK for direct API calls instead of Amplify
-// This avoids dependency on the ever-changing Amplify API
 import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-runtime-v2";
+import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
+import awsConfig from '../aws-config';
+import './ChatInterface.css';
 
 // Create a unique session ID that persists for the session
 const sessionId = "session-" + Math.random().toString(36).substring(2, 10);
 
-// Create Lex client - using environment variables from Amplify
+// Create Lex client with credentials from Cognito Identity Pool
 const lexClient = new LexRuntimeV2Client({ 
-  region: process.env.REACT_APP_AWS_REGION || 'eu-west-2'
-  // Credentials will be picked up from Cognito Identity Pool
+  region: awsConfig.region,
+  credentials: fromCognitoIdentityPool({
+    clientConfig: { region: awsConfig.region },
+    identityPoolId: awsConfig.identityPoolId
+  })
 });
 
 const ChatInterface = () => {
@@ -58,11 +60,11 @@ const ChatInterface = () => {
     try {
       console.log("Sending message to Lex:", inputText);
       
-      // Use direct AWS SDK call to Lex
+      // Use AWS SDK to call Lex directly
       const params = {
-        botId: process.env.REACT_APP_LEX_BOT_ID,
-        botAliasId: process.env.REACT_APP_LEX_BOT_ALIAS_ID,
-        localeId: process.env.REACT_APP_LEX_LOCALE_ID || 'en_US',
+        botId: awsConfig.lexBotId,
+        botAliasId: awsConfig.lexBotAliasId,
+        localeId: awsConfig.lexLocaleId,
         sessionId: sessionId,
         text: inputText
       };
