@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Amplify, Interactions } from 'aws-amplify';
+import { Amplify } from 'aws-amplify';
+import { Interactions } from '@aws-amplify/interactions';
 import config from '../config';
 import './ChatInterface.css';
 
