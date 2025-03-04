@@ -5,19 +5,32 @@ import config from '../config';
 import './ChatInterface.css';
 
 // Initialize Amplify with just the necessary configuration
-Amplify.configure({
-  // Just basic region configuration
-  Interactions: {
-    bots: {
-      "LexBot": { // Just a name for reference in our code
-        botId: config.lexBotId,
-        botAliasId: config.lexBotAliasId,
-        localeId: config.lexLocaleId,
-        region: config.region
+console.log('Configuring Amplify with:', {
+    botId: config.lexBotId,
+    botAliasId: config.lexBotAliasId,
+    localeId: config.lexLocaleId,
+    region: config.region
+  });
+  
+  Amplify.configure({
+    Interactions: {
+      bots: {
+        "OrderProcessingBot": { // Important: Use actual bot name here and below: const response = await Interactions.send("OrderProcessingBot", inputText);
+          botId: config.lexBotId,
+          botAliasId: config.lexBotAliasId,
+          localeId: config.lexLocaleId,
+          region: config.region
+        }
       }
     }
-  }
-});
+  });
+
+console.log('Environment variables:', {
+    region: process.env.REACT_APP_AWS_REGION,
+    botId: process.env.REACT_APP_LEX_BOT_ID,
+    botAliasId: process.env.REACT_APP_LEX_BOT_ALIAS_ID,
+    localeId: process.env.REACT_APP_LEX_LOCALE_ID
+  });
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -30,7 +43,7 @@ const ChatInterface = () => {
     setMessages([
       {
         type: 'bot',
-        content: 'Hello! How can I help you today?',
+        content: 'Hello! I am a test chat! Say Hi back!',
         timestamp: new Date().toISOString()
       }
     ]);
@@ -63,8 +76,7 @@ const ChatInterface = () => {
     try {
       console.log("Sending message to Lex:", inputText);
       
-      // Use Amplify Interactions instead of AWS SDK directly
-      const response = await Interactions.send("LexBot", inputText);
+      const response = await Interactions.send("OrderProcessingBot", inputText);
       
       console.log("Received response from Lex:", response);
       
