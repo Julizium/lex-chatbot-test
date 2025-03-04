@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Interactions } from 'aws-amplify';
+import { sendMessage } from '@aws-amplify/interactions';
 import { uploadData, getUrl } from '@aws-amplify/storage';
 import './ChatInterface.css';
 import '../aws-config'; // Import AWS configuration
@@ -114,9 +114,13 @@ const ChatInterface = () => {
       };
       
       // Send to Lex using ProcessDocument intent
-      const response = await Interactions.send('LexBot', "Process this document", {
-        sessionAttributes,
-        requestAttributes
+      const response = await sendMessage({
+        botName: 'LexBot',
+        message: "Process this document",
+        options: {
+          sessionAttributes,
+          requestAttributes
+        }
       });
       
       console.log("Received document processing response from Lex:", response);
@@ -172,7 +176,10 @@ const ChatInterface = () => {
       console.log("Sending message to Lex:", inputText);
       
       // Use Amplify Interactions to send the message to Lex
-      const response = await Interactions.send('LexBot', inputText);
+      const response = await sendMessage({
+        botName: 'LexBot',
+        message: inputText
+      });
       
       console.log("Received response from Lex:", response);
       
