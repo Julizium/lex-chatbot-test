@@ -1,35 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Amplify } from 'aws-amplify';
-import { Interactions } from '@aws-amplify/interactions';
+import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-runtime-v2";
 import config from '../config';
 import './ChatInterface.css';
 
-Amplify.configure({
-  region: config.region,
-  Interactions: {
-    bots: {
-      "OrderProcessingBot": {
-        botId: config.lexBotId,
-        botAliasId: config.lexBotAliasId,
-        localeId: config.lexLocaleId,
-        region: config.region
-      }
-    }
-  }
-});
-
-console.log('Configured Amplify with:', {
+// Log configuration for debugging
+console.log('Config values:', {
   region: config.region,
   botId: config.lexBotId,
   botAliasId: config.lexBotAliasId,
   localeId: config.lexLocaleId
 });
 
-console.log('Environment variables:', {
-  region: process.env.REACT_APP_AWS_REGION,
-  botId: process.env.REACT_APP_LEX_BOT_ID,
-  botAliasId: process.env.REACT_APP_LEX_BOT_ALIAS_ID,
-  localeId: process.env.REACT_APP_LEX_LOCALE_ID
+// Create a unique session ID that persists for the session
+const sessionId = "session-" + Math.random().toString(36).substring(2, 10);
+
+// Create Lex client directly
+const lexClient = new LexRuntimeV2Client({ 
+  region: config.region
 });
 
 const ChatInterface = () => {
@@ -74,21 +61,35 @@ const ChatInterface = () => {
     setIsLoading(true);
     
     try {
-      console.log("Sending message to Lex:", inputText);
+      console.log("Sending message to Lex with params:", {
+        botId: config.lexBotId,
+        botAliasId: config.lexBotAliasId,
+        localeId: config.lexLocaleId,
+        sessionId: sessionId,
+        text: inputText
+      });
       
-      const response = await Interactions.send("OrderProcessingBot", inputText);
+      const params = {
+        botId: config.lexBotId,
+        botAliasId: config.lexBotAliasId,
+        localeId: config.lexLocaleId,
+        sessionId: sessionId,
+        text: inputText
+      };
+      
+      const command = new RecognizeTextCommand(params);
+      const response = await lexClient.send(command);
       
       console.log("Received response from Lex:", response);
       
-      // Process the response (format may differ from AWS SDK)
-      if (response && response.message) {
-        const botMessage = {
+      if (response.messages && response.messages.length > 0) {
+        const botMessages = response.messages.map(message => ({
           type: 'bot',
-          content: response.message,
+          content: message.content,
           timestamp: new Date().toISOString()
-        };
+        }));
         
-        setMessages(prevMessages => [...prevMessages, botMessage]);
+        setMessages(prevMessages => [...prevMessages, ...botMessages]);
       } else {
         // Handle empty response
         setMessages(prevMessages => [
