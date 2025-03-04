@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Interactions } from 'aws-amplify';
-import { Storage } from '@aws-amplify/storage';
+import { uploadData, getUrl } from '@aws-amplify/storage';
 import './ChatInterface.css';
 import '../aws-config'; // Import AWS configuration
 
@@ -50,13 +50,15 @@ const ChatInterface = () => {
     try {
       // 1. Upload file to S3
       const fileName = `${Date.now()}-${selectedFile.name}`;
-      const result = await Storage.put(
-        `uploads/${sessionId}/${fileName}`, 
-        selectedFile, 
-        {
-          contentType: selectedFile.type,
+      const filePath = `uploads/${sessionId}/${fileName}`;
+      
+      const result = await uploadData({
+        key: filePath,
+        data: selectedFile,
+        options: {
+          contentType: selectedFile.type
         }
-      );
+      });
       
       console.log('File uploaded successfully:', result);
       
@@ -67,7 +69,7 @@ const ChatInterface = () => {
         timestamp: new Date().toISOString(),
         isFile: true,
         fileName: selectedFile.name,
-        fileKey: result.key
+        fileKey: filePath
       };
       
       setMessages(prevMessages => [...prevMessages, fileMessage]);

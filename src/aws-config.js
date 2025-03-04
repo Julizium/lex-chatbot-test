@@ -1,11 +1,9 @@
-
 import { Amplify } from 'aws-amplify';
-import { Storage } from '@aws-amplify/storage';
 
 const awsConfig = {
   Auth: {
     // For unauthenticated users
-    identityPoolId: process.env.REACT_APP_IDENTITY_POOL_ID, 
+    identityPoolId: process.env.REACT_APP_IDENTITY_POOL_ID,
     region: process.env.REACT_APP_AWS_REGION || 'eu-west-2',
   },
   Interactions: {
@@ -21,12 +19,9 @@ const awsConfig = {
       }
     }
   },
-  // Add Storage configuration if you need file uploads
   Storage: {
-    AWSS3: {
-      bucket: process.env.REACT_APP_S3_BUCKET_NAME,
-      region: process.env.REACT_APP_AWS_REGION || 'eu-west-2',
-    }
+    region: process.env.REACT_APP_AWS_REGION || 'eu-west-2',
+    bucket: process.env.REACT_APP_S3_BUCKET_NAME
   }
 };
 
