@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { sendMessage } from '@aws-amplify/interactions';
-import { uploadData, getUrl } from '@aws-amplify/storage';
 import './ChatInterface.css';
-import '../aws-config'; // Import AWS configuration
 
 // Create a unique session ID that persists for the session
 const sessionId = "session-" + Math.random().toString(36).substring(2, 10);
@@ -11,9 +8,7 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
   
   // Add welcome message on mount
   useEffect(() => {
@@ -36,129 +31,7 @@ const ChatInterface = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  // Handle file selection
-  const handleFileSelect = (e) => {
-    setSelectedFile(e.target.files[0]);
-  };
-  
-  // Handle file upload
-  const handleFileUpload = async () => {
-    if (!selectedFile) return;
-    
-    setIsLoading(true);
-    
-    try {
-      // 1. Upload file to S3
-      const fileName = `${Date.now()}-${selectedFile.name}`;
-      const filePath = `uploads/${sessionId}/${fileName}`;
-      
-      const result = await uploadData({
-        key: filePath,
-        data: selectedFile,
-        options: {
-          contentType: selectedFile.type
-        }
-      });
-      
-      console.log('File uploaded successfully:', result);
-      
-      // Add file message to chat
-      const fileMessage = {
-        type: 'user',
-        content: `File uploaded: ${selectedFile.name}`,
-        timestamp: new Date().toISOString(),
-        isFile: true,
-        fileName: selectedFile.name,
-        fileKey: filePath
-      };
-      
-      setMessages(prevMessages => [...prevMessages, fileMessage]);
-      
-      // 2. Read the file content for processing
-      let fileContent = '';
-      
-      // Read file content based on type
-      if (selectedFile.type.includes('text') || 
-          selectedFile.type.includes('json') || 
-          selectedFile.type.includes('csv')) {
-        // For text-based files
-        const reader = new FileReader();
-        fileContent = await new Promise((resolve) => {
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsText(selectedFile);
-        });
-      } else if (selectedFile.type.includes('image') || 
-                selectedFile.type.includes('pdf') || 
-                selectedFile.type.includes('application')) {
-        // For binary files (images, PDFs, etc.)
-        const reader = new FileReader();
-        const base64Content = await new Promise((resolve) => {
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(selectedFile);
-        });
-        
-        // Extract base64 content (remove data URL prefix)
-        fileContent = base64Content.split(',')[1];
-      }
-      
-      // 3. Send the document to Lex with the ProcessDocument intent
-      console.log("Sending document to Lex");
-      
-      const sessionAttributes = {
-        'documentName': selectedFile.name,
-        'documentType': selectedFile.type
-      };
-      
-      const requestAttributes = {
-        'x-amz-lex-document': fileContent
-      };
-      
-      // Send to Lex using ProcessDocument intent
-      const response = await sendMessage({
-        botName: 'LexBot',
-        message: "Process this document",
-        options: {
-          sessionAttributes,
-          requestAttributes
-        }
-      });
-      
-      console.log("Received document processing response from Lex:", response);
-      
-      if (response.message) {
-        // Handle response from Lex
-        const botMessage = {
-          type: 'bot',
-          content: response.message,
-          timestamp: new Date().toISOString()
-        };
-        
-        setMessages(prevMessages => [...prevMessages, botMessage]);
-      }
-      
-      // Clear selected file
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      
-    } catch (error) {
-      console.error('Error processing file:', error);
-      
-      const errorMessage = {
-        type: 'bot',
-        content: `Sorry, there was an error processing your file: ${error.message}`,
-        timestamp: new Date().toISOString(),
-        isError: true
-      };
-      
-      setMessages(prevMessages => [...prevMessages, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Send text message to Lex
+  // Send text message (simple echo for now)
   const sendTextMessage = async () => {
     if (!inputText.trim()) return;
     
@@ -173,38 +46,19 @@ const ChatInterface = () => {
     setIsLoading(true);
     
     try {
-      console.log("Sending message to Lex:", inputText);
-      
-      // Use Amplify Interactions to send the message to Lex
-      const response = await sendMessage({
-        botName: 'LexBot',
-        message: inputText
-      });
-      
-      console.log("Received response from Lex:", response);
-      
-      if (response.message) {
-        // Handle response from Lex
+      // Simple echo response
+      setTimeout(() => {
         const botMessage = {
           type: 'bot',
-          content: response.message,
+          content: `You said: "${inputText}"`,
           timestamp: new Date().toISOString()
         };
         
         setMessages(prevMessages => [...prevMessages, botMessage]);
-      } else {
-        // Handle empty response
-        setMessages(prevMessages => [
-          ...prevMessages, 
-          {
-            type: 'bot',
-            content: "I didn't understand that. Could you try again?",
-            timestamp: new Date().toISOString()
-          }
-        ]);
-      }
+        setIsLoading(false);
+      }, 1000);
     } catch (error) {
-      console.error('Error communicating with Lex:', error);
+      console.error('Error:', error);
       
       const errorMessage = {
         type: 'bot',
@@ -214,7 +68,6 @@ const ChatInterface = () => {
       };
       
       setMessages(prevMessages => [...prevMessages, errorMessage]);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -240,30 +93,16 @@ const ChatInterface = () => {
     }
   };
   
-  const openFileSelector = () => {
-    fileInputRef.current?.click();
-  };
-  
   return (
     <div className="chat-container">
       <div className="chat-messages">
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`message ${message.type} ${message.isError ? 'error' : ''} ${message.isFile ? 'file' : ''}`}
+            className={`message ${message.type} ${message.isError ? 'error' : ''}`}
           >
             <div className="message-content">
-              {message.isFile ? (
-                <>
-                  <div className="file-icon">📎</div>
-                  <div className="file-details">
-                    <div className="file-name">{message.fileName}</div>
-                    <div className="file-info">Uploaded successfully</div>
-                  </div>
-                </>
-              ) : (
-                message.content
-              )}
+              {message.content}
             </div>
             <div className="message-timestamp">
               {new Date(message.timestamp).toLocaleTimeString()}
@@ -291,33 +130,6 @@ const ChatInterface = () => {
           placeholder="Type a message..."
           disabled={isLoading}
         />
-        
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileSelect}
-          style={{ display: 'none' }}
-        />
-        
-        <button 
-          type="button" 
-          onClick={openFileSelector}
-          className="file-button"
-          disabled={isLoading}
-        >
-          📎
-        </button>
-        
-        {selectedFile && (
-          <button 
-            type="button" 
-            onClick={handleFileUpload}
-            className="upload-button"
-            disabled={isLoading}
-          >
-            Upload
-          </button>
-        )}
         
         <button 
           type="submit" 
