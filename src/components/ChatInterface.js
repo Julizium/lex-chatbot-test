@@ -3,6 +3,7 @@ import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-ru
 import config from '../config';
 import './ChatInterface.css';
 
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
