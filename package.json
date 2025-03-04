@@ -4,6 +4,8 @@
   "private": true,
   "dependencies": {
     "@aws-sdk/client-lex-runtime-v2": "^3.758.0",
+    "@aws-sdk/credential-provider-cognito-identity": "^3.758.0",
+    "@aws-sdk/credential-provider-web-identity": "^3.758.0",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",

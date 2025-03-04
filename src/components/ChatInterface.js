@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-runtime-v2";
 import config from '../config';
 import './ChatInterface.css';
-
+import { defaultProvider } from "@aws-sdk/credential-provider-node";
+import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -16,10 +17,12 @@ const ChatInterface = () => {
   useEffect(() => {
     const setupLexClient = async () => {
         try {
+          console.log("Setting up Lex client with region:", config.region);
           // Create Lex client without explicit credentials
           // It will automatically use the IAM role assigned to the Amplify app
           const client = new LexRuntimeV2Client({
-            region: config.region
+            region: config.region,
+            credentials: defaultProvider()
           });
           
           setLexClient(client);
@@ -27,6 +30,7 @@ const ChatInterface = () => {
             // Generate a unique session ID
           const newSessionId = generateSessionId();
           setSessionId(newSessionId);
+          
             
             // Add welcome message
           setMessages([
