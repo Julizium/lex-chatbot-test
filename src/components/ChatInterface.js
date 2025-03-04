@@ -14,36 +14,45 @@ const ChatInterface = () => {
   // Create a Lex client on component mount
   useEffect(() => {
     const setupLexClient = async () => {
-      try {
-        console.log("Setting up Lex client with config:", {
-          region: config.region,
-          botId: config.lexBotId,
-          botAliasId: config.lexBotAliasId,
-          localeId: config.lexLocaleId
-        });
-        
-        // Create Lex client
-        const client = new LexRuntimeV2Client({
-          region: config.region
-        });
-        
-        setLexClient(client);
-        
-        // Generate a unique session ID
-        const newSessionId = generateSessionId();
-        setSessionId(newSessionId);
-        
-        // Add welcome message
-        setMessages([
+        try {
+          // Create Lex client without explicit credentials
+          // It will automatically use the IAM role assigned to the Amplify app
+          const client = new LexRuntimeV2Client({
+            region: config.region
+          });
+          
+          setLexClient(client);
+            
+            // Generate a unique session ID
+          const newSessionId = generateSessionId();
+          setSessionId(newSessionId);
+            
+            // Add welcome message
+          setMessages([
           {
-            type: 'bot',
-            content: 'Hello! How can I help you today?',
-            timestamp: new Date().toISOString()
+                type: 'bot',
+                content: 'Hello! How can I help you today?',
+                timestamp: new Date().toISOString()
           }
-        ]);
-      } catch (error) {
-        console.error('Error setting up Lex client:', error);
-      }
+                      ]);
+        } catch (error) {
+            console.error('Error setting up Lex client:', error);
+            if (error.name === 'AccessDeniedException') {
+                console.error('Access denied. Check IAM permissions for your Amplify app.');
+            } else if (error.name === 'ResourceNotFoundException') {
+                console.error('Resource not found. Check Lex bot ID, alias ID and region.');
+            }
+            
+            // Add error message to chat
+            setMessages([
+                {
+                    type: 'bot',
+                    content: 'Sorry, I\'m having trouble connecting. Please try again later.',
+                    timestamp: new Date().toISOString(),
+                    isError: true
+                }
+            ]);
+        }
     };
     
     setupLexClient();
