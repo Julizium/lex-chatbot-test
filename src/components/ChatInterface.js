@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-runtime-v2";
+import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 import config from '../config';
 import './ChatInterface.css';
 
@@ -14,9 +15,13 @@ console.log('Config values:', {
 // Create a unique session ID that persists for the session
 const sessionId = "session-" + Math.random().toString(36).substring(2, 10);
 
-// Create Lex client directly
 const lexClient = new LexRuntimeV2Client({ 
-  region: config.region
+  region: config.region,
+  credentials: {
+    // Use environment variables for credentials in development
+    accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID || 'DUMMY_KEY_FOR_AMPLIFY',
+    secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY || 'DUMMY_SECRET_FOR_AMPLIFY'
+  }
 });
 
 const ChatInterface = () => {
@@ -61,46 +66,46 @@ const ChatInterface = () => {
     setIsLoading(true);
     
     try {
-      console.log("Sending message to Lex with params:", {
-        botId: config.lexBotId,
-        botAliasId: config.lexBotAliasId,
-        localeId: config.lexLocaleId,
-        sessionId: sessionId,
-        text: inputText
-      });
-      
-      const params = {
-        botId: config.lexBotId,
-        botAliasId: config.lexBotAliasId,
-        localeId: config.lexLocaleId,
-        sessionId: sessionId,
-        text: inputText
-      };
-      
-      const command = new RecognizeTextCommand(params);
-      const response = await lexClient.send(command);
-      
-      console.log("Received response from Lex:", response);
-      
-      if (response.messages && response.messages.length > 0) {
-        const botMessages = response.messages.map(message => ({
-          type: 'bot',
-          content: message.content,
-          timestamp: new Date().toISOString()
-        }));
+        console.log("Sending message to Lex with params:", {
+          botId: config.lexBotId,
+          botAliasId: config.lexBotAliasId,
+          localeId: config.lexLocaleId,
+          sessionId: sessionId,
+          text: inputText
+        });
         
-        setMessages(prevMessages => [...prevMessages, ...botMessages]);
-      } else {
-        // Handle empty response
-        setMessages(prevMessages => [
-          ...prevMessages, 
-          {
+        const params = {
+          botId: config.lexBotId,
+          botAliasId: config.lexBotAliasId,
+          localeId: config.lexLocaleId,
+          sessionId: sessionId,
+          text: inputText
+        };
+        
+        const command = new RecognizeTextCommand(params);
+        const response = await lexClient.send(command);
+        
+        console.log("Received response from Lex:", response);
+        
+        if (response.messages && response.messages.length > 0) {
+            const botMessages = response.messages.map(message => ({
             type: 'bot',
-            content: "I didn't understand that. Could you try again?",
+            content: message.content,
             timestamp: new Date().toISOString()
-          }
-        ]);
-      }
+            }));
+            
+            setMessages(prevMessages => [...prevMessages, ...botMessages]);
+        } else {
+            // Handle empty response
+            setMessages(prevMessages => [
+            ...prevMessages, 
+            {
+                type: 'bot',
+                content: "I didn't understand that. Could you try again?",
+                timestamp: new Date().toISOString()
+            }
+            ]);
+        }
     } catch (error) {
       console.error('Error communicating with Lex:', error);
       
