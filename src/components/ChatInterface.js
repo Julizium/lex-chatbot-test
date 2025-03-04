@@ -3,7 +3,6 @@ import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-ru
 import config from '../config';
 import './ChatInterface.css';
 import { defaultProvider } from "@aws-sdk/credential-provider-node";
-import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -22,7 +21,6 @@ const ChatInterface = () => {
           // It will automatically use the IAM role assigned to the Amplify app
           const client = new LexRuntimeV2Client({
             region: config.region,
-            credentials: defaultProvider()
           });
           
           setLexClient(client);
