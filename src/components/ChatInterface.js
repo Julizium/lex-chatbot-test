@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-runtime-v2";
-import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
-import config from '../config';
 import './ChatInterface.css';
+import config from '../config';
 
 // Log configuration for debugging
 console.log('Config values:', {
@@ -15,13 +14,11 @@ console.log('Config values:', {
 // Create a unique session ID that persists for the session
 const sessionId = "session-" + Math.random().toString(36).substring(2, 10);
 
+// Create Lex client
 const lexClient = new LexRuntimeV2Client({ 
   region: config.region,
-  credentials: {
-    // Use environment variables for credentials in development
-    accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID || 'DUMMY_KEY_FOR_AMPLIFY',
-    secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY || 'DUMMY_SECRET_FOR_AMPLIFY'
-  }
+  // For Amplify deployments, we'll rely on environment variables
+  // configured in the Amplify console
 });
 
 const ChatInterface = () => {
