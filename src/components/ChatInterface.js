@@ -1,75 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LexRuntimeV2Client, RecognizeTextCommand } from "@aws-sdk/client-lex-runtime-v2";
+import { Amplify, Interactions } from 'aws-amplify';
 import config from '../config';
 import './ChatInterface.css';
-import { defaultProvider } from "@aws-sdk/credential-provider-node";
+
+// Initialize Amplify with just the necessary configuration
+Amplify.configure({
+  // Just basic region configuration
+  Interactions: {
+    bots: {
+      "LexBot": { // Just a name for reference in our code
+        botId: config.lexBotId,
+        botAliasId: config.lexBotAliasId,
+        localeId: config.lexLocaleId,
+        region: config.region
+      }
+    }
+  }
+});
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId, setSessionId] = useState('');
-  const [lexClient, setLexClient] = useState(null);
   const messagesEndRef = useRef(null);
   
-  // Create a Lex client on component mount
+  // Add welcome message on mount
   useEffect(() => {
-    const setupLexClient = async () => {
-        try {
-          console.log("Setting up Lex client with region:", config.region);
-          // Create Lex client without explicit credentials
-          // It will automatically use the IAM role assigned to the Amplify app
-          const client = new LexRuntimeV2Client({
-            region: config.region,
-          });
-          
-          setLexClient(client);
-            
-            // Generate a unique session ID
-          const newSessionId = generateSessionId();
-          setSessionId(newSessionId);
-          
-            
-            // Add welcome message
-          setMessages([
-          {
-                type: 'bot',
-                content: 'Hello! How can I help you today?',
-                timestamp: new Date().toISOString()
-          }
-                      ]);
-        } catch (error) {
-            console.error('Error setting up Lex client:', error);
-            if (error.name === 'AccessDeniedException') {
-                console.error('Access denied. Check IAM permissions for your Amplify app.');
-            } else if (error.name === 'ResourceNotFoundException') {
-                console.error('Resource not found. Check Lex bot ID, alias ID and region.');
-            }
-            
-            // Add error message to chat
-            setMessages([
-                {
-                    type: 'bot',
-                    content: 'Sorry, I\'m having trouble connecting. Please try again later.',
-                    timestamp: new Date().toISOString(),
-                    isError: true
-                }
-            ]);
-        }
-    };
-    
-    setupLexClient();
+    setMessages([
+      {
+        type: 'bot',
+        content: 'Hello! How can I help you today?',
+        timestamp: new Date().toISOString()
+      }
+    ]);
   }, []);
   
   // Auto-scroll to bottom of messages
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-  
-  // Generate a random session ID
-  const generateSessionId = () => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  };
   
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -78,7 +47,7 @@ const ChatInterface = () => {
   
   // Send text message to Lex
   const sendTextMessage = async () => {
-    if (!inputText.trim() || !lexClient) return;
+    if (!inputText.trim()) return;
     
     const userMessage = {
       type: 'user',
@@ -91,36 +60,29 @@ const ChatInterface = () => {
     setIsLoading(true);
     
     try {
-      const params = {
-        botId: config.lexBotId,
-        botAliasId: config.lexBotAliasId,
-        localeId: config.lexLocaleId,
-        sessionId: sessionId,
-        text: inputText
-      };
+      console.log("Sending message to Lex:", inputText);
       
-      console.log("Sending message to Lex with params:", params);
-      
-      const command = new RecognizeTextCommand(params);
-      const response = await lexClient.send(command);
+      // Use Amplify Interactions instead of AWS SDK directly
+      const response = await Interactions.send("LexBot", inputText);
       
       console.log("Received response from Lex:", response);
       
-      if (response.messages && response.messages.length > 0) {
-        const botMessages = response.messages.map(message => ({
+      // Process the response (format may differ from AWS SDK)
+      if (response && response.message) {
+        const botMessage = {
           type: 'bot',
-          content: message.content,
+          content: response.message,
           timestamp: new Date().toISOString()
-        }));
+        };
         
-        setMessages(prevMessages => [...prevMessages, ...botMessages]);
+        setMessages(prevMessages => [...prevMessages, botMessage]);
       } else {
         // Handle empty response
         setMessages(prevMessages => [
           ...prevMessages, 
           {
             type: 'bot',
-            content: 'I didn\'t understand that. Could you try again?',
+            content: "I didn't understand that. Could you try again?",
             timestamp: new Date().toISOString()
           }
         ]);
@@ -141,14 +103,14 @@ const ChatInterface = () => {
     }
   };
   
-  // Handle input change and form submission (rest of the component remains similar)
+  // Handle input change and form submission
   const handleInputChange = (e) => {
     setInputText(e.target.value);
   };
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (inputText.trim() && lexClient) {
+    if (inputText.trim()) {
       sendTextMessage();
     }
   };
@@ -156,7 +118,7 @@ const ChatInterface = () => {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (inputText.trim() && lexClient) {
+      if (inputText.trim()) {
         sendTextMessage();
       }
     }
@@ -197,11 +159,11 @@ const ChatInterface = () => {
           onChange={handleInputChange}
           onKeyPress={handleKeyPress}
           placeholder="Type a message..."
-          disabled={isLoading || !lexClient}
+          disabled={isLoading}
         />
         <button 
           type="submit" 
-          disabled={!inputText.trim() || isLoading || !lexClient}
+          disabled={!inputText.trim() || isLoading}
           className="send-button"
         >
           Send
