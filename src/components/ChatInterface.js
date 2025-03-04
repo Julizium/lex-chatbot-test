@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Interactions, Storage } from 'aws-amplify';
+import { Interactions } from 'aws-amplify';
+import { Storage } from '@aws-amplify/storage';
 import './ChatInterface.css';
 import '../aws-config'; // Import AWS configuration
 
@@ -47,133 +48,129 @@ const ChatInterface = () => {
     setIsLoading(true);
     
     try {
-    // 1. Upload file to S3
-    const fileName = `${Date.now()}-${selectedFile.name}`;
-    const result = await Storage.put(
+      // 1. Upload file to S3
+      const fileName = `${Date.now()}-${selectedFile.name}`;
+      const result = await Storage.put(
         `uploads/${sessionId}/${fileName}`, 
         selectedFile, 
         {
-        contentType: selectedFile.type,
+          contentType: selectedFile.type,
         }
-    );
-    
-    console.log('File uploaded successfully:', result);
-    
-    // Add file message to chat
-    const fileMessage = {
+      );
+      
+      console.log('File uploaded successfully:', result);
+      
+      // Add file message to chat
+      const fileMessage = {
         type: 'user',
         content: `File uploaded: ${selectedFile.name}`,
         timestamp: new Date().toISOString(),
         isFile: true,
         fileName: selectedFile.name,
         fileKey: result.key
-    };
-    
-    setMessages(prevMessages => [...prevMessages, fileMessage]);
-    
-    // 2. Read the file content for processing
-    let fileContent = '';
-    
-    // Read file content based on type
-    if (selectedFile.type.includes('text') || 
-        selectedFile.type.includes('json') || 
-        selectedFile.type.includes('csv')) {
+      };
+      
+      setMessages(prevMessages => [...prevMessages, fileMessage]);
+      
+      // 2. Read the file content for processing
+      let fileContent = '';
+      
+      // Read file content based on type
+      if (selectedFile.type.includes('text') || 
+          selectedFile.type.includes('json') || 
+          selectedFile.type.includes('csv')) {
         // For text-based files
         const reader = new FileReader();
         fileContent = await new Promise((resolve) => {
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsText(selectedFile);
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsText(selectedFile);
         });
-    } else if (selectedFile.type.includes('image') || 
+      } else if (selectedFile.type.includes('image') || 
                 selectedFile.type.includes('pdf') || 
                 selectedFile.type.includes('application')) {
         // For binary files (images, PDFs, etc.)
         const reader = new FileReader();
         const base64Content = await new Promise((resolve) => {
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(selectedFile);
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(selectedFile);
         });
         
         // Extract base64 content (remove data URL prefix)
         fileContent = base64Content.split(',')[1];
-    }
-    
-    // 3. Send the document to Lex with the ProcessDocument intent
-    console.log("Sending document to Lex");
-    
-    const sessionAttributes = {
+      }
+      
+      // 3. Send the document to Lex with the ProcessDocument intent
+      console.log("Sending document to Lex");
+      
+      const sessionAttributes = {
         'documentName': selectedFile.name,
         'documentType': selectedFile.type
-    };
-    
-    const requestAttributes = {
+      };
+      
+      const requestAttributes = {
         'x-amz-lex-document': fileContent
-    };
-    
-    // Send to Lex using ProcessDocument intent
-    const response = await Interactions.send('LexBot', "Process this document", {
+      };
+      
+      // Send to Lex using ProcessDocument intent
+      const response = await Interactions.send('LexBot', "Process this document", {
         sessionAttributes,
         requestAttributes
-    });
-    
-    console.log("Received document processing response from Lex:", response);
-    
-    if (response.message) {
+      });
+      
+      console.log("Received document processing response from Lex:", response);
+      
+      if (response.message) {
         // Handle response from Lex
         const botMessage = {
-        type: 'bot',
-        content: response.message,
-        timestamp: new Date().toISOString()
+          type: 'bot',
+          content: response.message,
+          timestamp: new Date().toISOString()
         };
         
         setMessages(prevMessages => [...prevMessages, botMessage]);
-    }
-    
-    // Clear selected file
-    setSelectedFile(null);
-    if (fileInputRef.current) {
+      }
+      
+      // Clear selected file
+      setSelectedFile(null);
+      if (fileInputRef.current) {
         fileInputRef.current.value = '';
-    }
-    
+      }
+      
     } catch (error) {
-    console.error('Error processing file:', error);
-    
-    const errorMessage = {
+      console.error('Error processing file:', error);
+      
+      const errorMessage = {
         type: 'bot',
         content: `Sorry, there was an error processing your file: ${error.message}`,
         timestamp: new Date().toISOString(),
         isError: true
-    };
-    
-    setMessages(prevMessages => [...prevMessages, errorMessage]);
-    } finally {
-    setIsLoading(false);
-    }
-  };
-
-  // Send text message to Lex
-  const sendTextMessage = async (text = inputText, isSystem = false) => {
-    const messageText = text || inputText;
-    if (!messageText.trim()) return;
-    
-    if (!isSystem) {
-      const userMessage = {
-        type: 'user',
-        content: messageText,
-        timestamp: new Date().toISOString()
       };
       
-      setMessages(prevMessages => [...prevMessages, userMessage]);
-      setInputText('');
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
+  };
+  
+  // Send text message to Lex
+  const sendTextMessage = async () => {
+    if (!inputText.trim()) return;
     
+    const userMessage = {
+      type: 'user',
+      content: inputText,
+      timestamp: new Date().toISOString()
+    };
+    
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    setInputText('');
     setIsLoading(true);
     
     try {
-      console.log("Sending message to Lex:", messageText);
+      console.log("Sending message to Lex:", inputText);
       
       // Use Amplify Interactions to send the message to Lex
-      const response = await Interactions.send('LexBot', messageText);
+      const response = await Interactions.send('LexBot', inputText);
       
       console.log("Received response from Lex:", response);
       

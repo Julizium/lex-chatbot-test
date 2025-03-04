@@ -1,5 +1,6 @@
-// src/aws-config.js
+
 import { Amplify } from 'aws-amplify';
+import { Storage } from '@aws-amplify/storage';
 
 const awsConfig = {
   Auth: {
