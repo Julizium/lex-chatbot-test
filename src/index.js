@@ -5,12 +5,14 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { Amplify } from 'aws-amplify';
 
-// Configure Amplify
+// Configure Amplify without Auth
 Amplify.configure({
-  // Use Amplify's automatic auth configuration
-  // This will leverage the IAM credentials provided by Amplify's hosting service
+  // Disable Auth for now
   Auth: {
+    // This ensures Auth is included but not fully configured
+    // which prevents "Auth.Cognito is undefined" error
     region: process.env.REACT_APP_AWS_REGION || 'eu-west-2',
+    mandatorySignIn: false
   }
 });
 
